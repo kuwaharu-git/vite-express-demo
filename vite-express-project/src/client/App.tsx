@@ -1,11 +1,43 @@
 import "./App.css";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import reactLogo from "./assets/react.svg";
+import { io } from "socket.io-client";
+
+let socket: any;
 
 function App() {
   const [count, setCount] = useState(0);
+  const [messages, setMessages] = useState<string[]>([]);
+  const [input, setInput] = useState("");
+  const socketUrl = "http://localhost:3000/ws";
+
+  useEffect(() => {
+    socket = io(socketUrl, { withCredentials: true });
+    socket.on("connect", () => {
+      console.log("Connected to server with ID:", socket.id);
+    });
+
+    socket.on("connect_error", (err: any) => {
+      console.error("Connection error:", err);
+    });
+
+    socket.on("message", (msg: string) => {
+      setMessages((prevMessages) => [...prevMessages, msg]);
+    });
+
+    return () => {
+      socket.off("message");
+    };
+  }, []);
+
+  const sendMessage = () => {
+    if (input.trim()) {
+      socket.emit("message", input);
+      setInput("");
+    }
+  };
 
   return (
     <div className="App">
@@ -29,6 +61,19 @@ function App() {
       <p className="read-the-docs">
         Click on the Vite and React logos to learn more
       </p>
+      <h1>Chat Application</h1>
+      <div className="chat-box">
+        {messages.map((msg, index) => (
+          <div key={index}>{msg}</div>
+        ))}
+      </div>
+      <input
+        type="text"
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        placeholder="Type a message..."
+      />
+      <button onClick={sendMessage}>Send</button>
     </div>
   );
 }
